@@ -59,7 +59,7 @@ func main() {
 		mne(err, "error getting files from remaining layer")
 		var modFound bool
 		for _, modifiedFile := range modifiedFiles {
-			if _, found := filemap[modifiedFile]; found && (!DirectoryIsExcluded(modifiedFile) && !FileIsExcluded(modifiedFile)) {
+			if _, found := filemap[modifiedFile]; found && (!FileIsExcluded(modifiedFile) && !DirectoryIsExcluded(modifiedFile)) {
 				modFound = true
 				disallowedModifications[modifiedFile] = id.String()
 			}
