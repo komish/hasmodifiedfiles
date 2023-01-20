@@ -1,4 +1,8 @@
 quay.io/opdev/simple-demo-operator:0.0.6
+quay.io/komish/deleteme-test-mod-files:0.0.1
+quay.io/komish/deleteme-test-mod-files:0.0.2
+quay.io/komish/deleteme-test-mod-files:0.0.3
+quay.io/komish/deleteme-test-mod-files:0.0.4
 quay.io/komish/deleteme-test-mod-files:0.0.5
 quay.io/opdev/preflight:stable
 registry.gitlab.com/gitlab-org/cloud-native/gitlab-operator:0.11.3
