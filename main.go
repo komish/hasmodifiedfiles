@@ -60,8 +60,8 @@ func main() {
 		mne(err, "error getting files from remaining layer")
 		var modFound bool
 		for _, modifiedFile := range modifiedFiles {
-			// if _, found := filemap[modifiedFile]; found && (!FileIsExcluded(modifiedFile) && !DirectoryIsExcluded(modifiedFile)) {  // USING MANUAL EXCLUSIONS
-			if _, found := filemap[modifiedFile]; found { // USING FILE FLAG EXCLUSIONS
+			if _, found := filemap[modifiedFile]; found && (!FileIsExcluded(modifiedFile) && !DirectoryIsExcluded(modifiedFile)) { // USING MANUAL EXCLUSIONS
+				// if _, found := filemap[modifiedFile]; found  { // USING FILE FLAG EXCLUSIONS
 				modFound = true
 				disallowedModifications[modifiedFile] = id.String()
 			}
@@ -72,6 +72,12 @@ func main() {
 		b, _ := json.MarshalIndent(modifiedFiles, "", "    ")
 		os.WriteFile(fmt.Sprintf("modified-in-%s.json", id.String()), b, 0644)
 	}
+	if len(disallowedModifications) > 0 {
+		fmt.Println("Summary of disallowed modifications")
+		b, _ := json.MarshalIndent(disallowedModifications, "", "    ")
+		fmt.Println(string(b))
+	}
+
 	b, _ := json.MarshalIndent(filemap, "", "    ")
 	os.WriteFile("filemap.json", b, 0644)
 	b, _ = json.MarshalIndent(disallowedModifications, "", "    ")
@@ -327,3 +333,4 @@ func GetPackageList(ctx context.Context, basePath string) ([]*rpmdb.PackageInfo,
 var red = lipgloss.NewStyle().Foreground(lipgloss.Color("#D21404")).Render
 var yellow = lipgloss.NewStyle().Foreground(lipgloss.Color("#D6B85A")).Render
 var blue = lipgloss.NewStyle().Foreground(lipgloss.Color("#0000FF")).Render
+var indented = lipgloss.NewStyle().PaddingLeft(8).Render
