@@ -43,7 +43,8 @@ func main() {
 		os.Exit(0)
 	}
 
-	filemap, err := InstalledFileMap(packages)
+	// filemap, err := InstalledFileMap(packages) // USING MANUAL EXCLUSIONS
+	filemap, err := InstalledFileMapWithExclusions(packages) // USING FILE FLAG EXCLUSIONS
 	mne(err, "couldn't extract a filemap from the package list")
 
 	if len(filemap) == 0 {
@@ -59,7 +60,8 @@ func main() {
 		mne(err, "error getting files from remaining layer")
 		var modFound bool
 		for _, modifiedFile := range modifiedFiles {
-			if _, found := filemap[modifiedFile]; found && (!FileIsExcluded(modifiedFile) && !DirectoryIsExcluded(modifiedFile)) {
+			// if _, found := filemap[modifiedFile]; found && (!FileIsExcluded(modifiedFile) && !DirectoryIsExcluded(modifiedFile)) {  // USING MANUAL EXCLUSIONS
+			if _, found := filemap[modifiedFile]; found { // USING FILE FLAG EXCLUSIONS
 				modFound = true
 				disallowedModifications[modifiedFile] = id.String()
 			}
@@ -143,6 +145,30 @@ func InstalledFileMap(pkglist []*rpmdb.PackageInfo) (map[string]string, error) {
 
 		for _, file := range files {
 			m[strings.TrimPrefix(filepath.Clean(file), "/")] = fmt.Sprintf("%s-%s", pkg.Name, pkg.Version)
+		}
+	}
+	return m, nil
+}
+
+// InstalledFileMapWithExclusions gets a map of installed filenames that have been cleaned
+// of extra slashes, dotslashes, and leading slashes.
+func InstalledFileMapWithExclusions(pkglist []*rpmdb.PackageInfo) (map[string]string, error) {
+	const okFlags = 0b00001011
+	m := map[string]string{}
+	for _, pkg := range pkglist {
+		files, err := pkg.InstalledFiles()
+		if err != nil {
+			return m, err
+		}
+
+		for _, file := range files {
+			if file.Flags&okFlags > 0 {
+				// Uncomment this if you want to see what files were considered valid - but it's very verbose (it's a lot of files)
+				// fmt.Println("\tfile", yellow(Normalize(file.Path)), "is considered modifiable because of its file flags", file.Flags)
+				// It is one of the ok flags. Skip it.
+				continue
+			}
+			m[Normalize(file.Path)] = fmt.Sprintf("%s-%s", pkg.Name, pkg.Version)
 		}
 	}
 	return m, nil
@@ -271,6 +297,7 @@ func ExtractRPMDB(layer v1.Layer) ([]*rpmdb.PackageInfo, error) {
 // GetPackageList returns the list of packages in the rpm database from either
 // /var/lib/rpm/rpmdb.sqlite, or /var/lib/rpm/Packages if the former does not exist.
 // If neither exists, this returns an error of type os.ErrNotExists
+// NOTE: Borrowed from existing preflight code. Nothing to change here.
 func GetPackageList(ctx context.Context, basePath string) ([]*rpmdb.PackageInfo, error) {
 	rpmdirPath := filepath.Join(basePath, "var", "lib", "rpm")
 	rpmdbPath := filepath.Join(rpmdirPath, "rpmdb.sqlite")
