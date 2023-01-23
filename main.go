@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	rpmdb "github.com/knqyf263/go-rpmdb/pkg"
@@ -28,7 +29,7 @@ func main() {
 	testContainer := os.Args[1]
 	fmt.Println("Container under test:", testContainer)
 
-	myImg, err := crane.Pull(testContainer)
+	myImg, err := crane.Pull(testContainer, crane.WithAuthFromKeychain(authn.DefaultKeychain))
 	mne(err, "pull img")
 	layers, err := myImg.Layers()
 	mne(err, "get layers")
@@ -162,7 +163,7 @@ func InstalledFileMap(pkglist []*rpmdb.PackageInfo) (map[string]string, error) {
 		}
 
 		for _, file := range files {
-			m[strings.TrimPrefix(filepath.Clean(file), "/")] = fmt.Sprintf("%s-%s", pkg.Name, pkg.Version)
+			m[Normalize(file)] = fmt.Sprintf("%s-%s-%s", pkg.Name, pkg.Version, pkg.Release)
 		}
 	}
 	return m, nil
@@ -171,7 +172,11 @@ func InstalledFileMap(pkglist []*rpmdb.PackageInfo) (map[string]string, error) {
 // InstalledFileMapWithExclusions gets a map of installed filenames that have been cleaned
 // of extra slashes, dotslashes, and leading slashes.
 func InstalledFileMapWithExclusions(pkglist []*rpmdb.PackageInfo) (map[string]string, error) {
-	const okFlags = 0b00001011
+	const okFlags = rpmdb.RPMFILE_CONFIG |
+		rpmdb.RPMFILE_DOC |
+		rpmdb.RPMFILE_LICENSE |
+		rpmdb.RPMFILE_MISSINGOK |
+		rpmdb.RPMFILE_README
 	m := map[string]string{}
 	for _, pkg := range pkglist {
 		files, err := pkg.InstalledFiles()
@@ -180,13 +185,14 @@ func InstalledFileMapWithExclusions(pkglist []*rpmdb.PackageInfo) (map[string]st
 		}
 
 		for _, file := range files {
-			if file.Flags&okFlags > 0 {
+			if int32(file.Flags)&okFlags > 0 {
 				// Uncomment this if you want to see what files were considered valid - but it's very verbose (it's a lot of files)
 				// fmt.Println("\tfile", yellow(Normalize(file.Path)), "is considered modifiable because of its file flags", file.Flags)
+
 				// It is one of the ok flags. Skip it.
 				continue
 			}
-			m[Normalize(file.Path)] = fmt.Sprintf("%s-%s", pkg.Name, pkg.Version)
+			m[Normalize(file.Path)] = fmt.Sprintf("%s-%s-%s", pkg.Name, pkg.Version, pkg.Release)
 		}
 	}
 	return m, nil
