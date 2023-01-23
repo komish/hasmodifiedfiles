@@ -4,7 +4,9 @@ set -e
 # this helps cleanup by cleanup.sh
 prefix="hasmodfiles-run"
 
-for image in $(cat images.txt); do
+IMAGEFILE=${IMAGEFILE:="images.txt"}
+
+for image in $(cat "${IMAGEFILE}"); do
     normalizedImage=$(echo "${image}" | tr [:punct:] _)
     dirname="${prefix}-${normalizedImage}"
     mkdir "${dirname}"
