@@ -60,7 +60,7 @@ func main() {
 		mne(err, "error getting files from remaining layer")
 		var modFound bool
 		for _, modifiedFile := range modifiedFiles {
-			if _, found := filemap[modifiedFile]; found && (!FileIsExcluded(modifiedFile) && !DirectoryIsExcluded(modifiedFile)) { // USING MANUAL EXCLUSIONS
+			if _, found := filemap[modifiedFile]; found && (!PathIsExcluded(modifiedFile) && !DirectoryIsExcluded(modifiedFile)) { // USING MANUAL EXCLUSIONS
 				// if _, found := filemap[modifiedFile]; found  { // USING FILE FLAG EXCLUSIONS
 				modFound = true
 				disallowedModifications[modifiedFile] = id.String()
@@ -103,6 +103,7 @@ func FindRPMDB(layers []v1.Layer) (found bool, foundIndex int, pkglist []*rpmdb.
 	return found, foundIndex, pkglist
 }
 
+// DirectoryIsExcluded excludes a directory and any file contained in that directory.
 func DirectoryIsExcluded(s string) bool {
 	excl := map[string]struct{}{
 		"etc": {},
@@ -120,10 +121,17 @@ func DirectoryIsExcluded(s string) bool {
 	return false
 }
 
-func FileIsExcluded(s string) bool {
+// PathIsExcluded checks if s is excluded explicitly as written.
+func PathIsExcluded(s string) bool {
 	excl := map[string]struct{}{
 		"etc/resolv.conf": {},
 		"etc/hostname":    {},
+		// etc and etc/ are both required as both can present the directory
+		// in a tarball. Same goes for other directories.
+		"etc":  {},
+		"etc/": {},
+		"run":  {},
+		"run/": {},
 	}
 
 	_, found := excl[s]
@@ -134,8 +142,12 @@ func FileIsExcluded(s string) bool {
 }
 
 // Normalize will clean a filepath of extraneous characters like ./, //, etc.
-// and strip a leading slash. E.g. /foo/../baz --> foo/baz
+// and strip a leading slash. E.g. /foo/../baz --> baz
 func Normalize(s string) string {
+	// for the root path, return the root path.
+	if s == "/" {
+		return s
+	}
 	return filepath.Clean(strings.TrimPrefix(s, "/"))
 }
 
@@ -333,4 +345,3 @@ func GetPackageList(ctx context.Context, basePath string) ([]*rpmdb.PackageInfo,
 var red = lipgloss.NewStyle().Foreground(lipgloss.Color("#D21404")).Render
 var yellow = lipgloss.NewStyle().Foreground(lipgloss.Color("#D6B85A")).Render
 var blue = lipgloss.NewStyle().Foreground(lipgloss.Color("#0000FF")).Render
-var indented = lipgloss.NewStyle().PaddingLeft(8).Render
